@@ -1,0 +1,72 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000011 /* CodexBarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* CodexBarApp.swift */; };
+		A10000000000000000000012 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* Models.swift */; };
+		A10000000000000000000013 /* Protocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* Protocol.swift */; };
+		A10000000000000000000014 /* Services.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004 /* Services.swift */; };
+		A10000000000000000000015 /* CodexAppServerClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* CodexAppServerClient.swift */; };
+		A10000000000000000000016 /* UsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000006 /* UsageStore.swift */; };
+		A10000000000000000000017 /* Views.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000007 /* Views.swift */; };
+		A10000000000000000000018 /* CodexBar.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* CodexBar.icns */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000001 /* CodexBarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexBarApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000002 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 /* Protocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Protocol.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* Services.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services.swift; sourceTree = "<group>"; };
+		A10000000000000000000005 /* CodexAppServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClient.swift; sourceTree = "<group>"; };
+		A10000000000000000000006 /* UsageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageStore.swift; sourceTree = "<group>"; };
+		A10000000000000000000007 /* Views.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views.swift; sourceTree = "<group>"; };
+		A10000000000000000000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000009 /* CodexBar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodexBar.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000010 /* CodexBar.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = CodexBar.icns; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000020 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000030 = {isa = PBXGroup; children = (A10000000000000000000031 /* Sources */, A10000000000000000000032 /* Resources */, A10000000000000000000033 /* Products */); sourceTree = "<group>"; };
+		A10000000000000000000031 /* Sources */ = {isa = PBXGroup; children = (A10000000000000000000001 /* CodexBarApp.swift */, A10000000000000000000002 /* Models.swift */, A10000000000000000000003 /* Protocol.swift */, A10000000000000000000004 /* Services.swift */, A10000000000000000000005 /* CodexAppServerClient.swift */, A10000000000000000000006 /* UsageStore.swift */, A10000000000000000000007 /* Views.swift */); path = Sources/CodexBar; sourceTree = "<group>"; };
+		A10000000000000000000032 /* Resources */ = {isa = PBXGroup; children = (A10000000000000000000008 /* Info.plist */, A10000000000000000000010 /* CodexBar.icns */); path = Resources; sourceTree = "<group>"; };
+		A10000000000000000000033 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000009 /* CodexBar.app */); name = Products; sourceTree = "<group>"; };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000040 /* CodexBar */ = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000041 /* Build configuration list for PBXNativeTarget "CodexBar" */; buildPhases = (A10000000000000000000042 /* Sources */, A10000000000000000000020 /* Frameworks */, A10000000000000000000043 /* Resources */); buildRules = (); dependencies = (); name = CodexBar; productName = CodexBar; productReference = A10000000000000000000009 /* CodexBar.app */; productType = "com.apple.product-type.application"; };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000050 /* Project object */ = {isa = PBXProject; attributes = { BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600; TargetAttributes = { A10000000000000000000040 = { CreatedOnToolsVersion = 16.0; }; }; }; buildConfigurationList = A10000000000000000000051 /* Build configuration list for PBXProject "CodexBar" */; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, ko, Base); mainGroup = A10000000000000000000030; productRefGroup = A10000000000000000000033 /* Products */; projectDirPath = ""; projectRoot = ""; targets = (A10000000000000000000040 /* CodexBar */); };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000043 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000018 /* CodexBar.icns in Resources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000042 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000011 /* CodexBarApp.swift in Sources */, A10000000000000000000012 /* Models.swift in Sources */, A10000000000000000000013 /* Protocol.swift in Sources */, A10000000000000000000014 /* Services.swift in Sources */, A10000000000000000000015 /* CodexAppServerClient.swift in Sources */, A10000000000000000000016 /* UsageStore.swift in Sources */, A10000000000000000000017 /* Views.swift in Sources */); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000060 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_VERSION = 5.0; }; name = Debug; };
+		A10000000000000000000061 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 5.0; }; name = Release; };
+		A10000000000000000000062 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = com.local.CodexBar; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; }; name = Debug; };
+		A10000000000000000000063 /* Release */ = {isa = XCBuildConfiguration; buildSettings = { CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; MACOSX_DEPLOYMENT_TARGET = 14.0; MARKETING_VERSION = 0.1.0; PRODUCT_BUNDLE_IDENTIFIER = com.local.CodexBar; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_OPTIMIZATION_LEVEL = "-O"; SWIFT_VERSION = 5.0; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000051 /* Build configuration list for PBXProject "CodexBar" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000060 /* Debug */, A10000000000000000000061 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A10000000000000000000041 /* Build configuration list for PBXNativeTarget "CodexBar" */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000062 /* Debug */, A10000000000000000000063 /* Release */); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+	};
+	rootObject = A10000000000000000000050 /* Project object */;
+}

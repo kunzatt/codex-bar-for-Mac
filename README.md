@@ -143,6 +143,10 @@ CodexBar는 `auth.json`의 내용을 직접 읽거나 파싱하지 않습니다.
 
 Codex CLI가 최신인지 확인한 뒤 설정에서 실행 파일 경로를 점검하세요. 계정은 등록되지만 플랜/쿼터가 제공되지 않을 수 있으며, 이 경우 앱은 `C --` 및 마지막 오류 상태를 유지합니다.
 
+**“CodexBar을(를) 열지 않음” Gatekeeper 경고**
+
+현재 GitHub/Homebrew 배포본은 Apple Developer ID 공증 전의 개인 배포본입니다. 경고가 표시되면 Finder에서 앱을 한 번 실행한 뒤 **시스템 설정 → 개인정보 보호 및 보안 → 그래도 열기**를 선택하세요. Gatekeeper를 전역으로 끄지 마세요. 이 안내는 Developer ID 서명·Apple 공증 릴리스가 준비되면 제거됩니다.
+
 **앱 제거와 인증 파일**
 
 앱 관리 프로필은 설정의 **로그아웃 후 로컬 프로필 삭제**를 선택하면 해당 UUID 계정 폴더만 지웁니다. `~/.codex`를 포함한 외부 프로필은 목록에서만 제거되며, 앱을 삭제해도 인증 파일은 남습니다. 필요하면 Finder에서 `~/Library/Application Support/CodexBar`를 직접 제거하세요.

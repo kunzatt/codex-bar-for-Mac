@@ -145,6 +145,10 @@ Add the account again from the popover. For an external `~/.codex` profile, comp
 
 Check that the Codex CLI is current and verify the executable path in Settings. An account can be registered even when plan or quota data is unavailable; in that case the app preserves `C --` and the latest generic error state.
 
+**Gatekeeper says that “CodexBar” cannot be opened**
+
+The current GitHub/Homebrew build is a personal distribution build and has not yet been notarized with an Apple Developer ID. If the warning appears, try opening the app once in Finder, then select **System Settings → Privacy & Security → Open Anyway**. Do not disable Gatekeeper globally. This notice will be removed once a Developer ID-signed and Apple-notarized release is available.
+
 **Removing the app and authentication files**
 
 For an app-managed profile, choose **Log out and delete local profile** in Settings to remove only that account's UUID folder. External profiles, including `~/.codex`, are removed from the list only. Deleting the app does not remove authentication files; remove `~/Library/Application Support/CodexBar` manually only if you intentionally want to erase app-managed data.

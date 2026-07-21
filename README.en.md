@@ -13,9 +13,12 @@ Finder and the Desktop use a dedicated app icon: a blue Codex symbol with bold `
 The release ZIP and Homebrew Cask currently support Apple Silicon Macs running macOS Sonoma (14) or later. `codexbar` is already used by another app, so this project's Cask token is `codexbar-for-mac`.
 
 ```zsh
-brew tap kunzatt/codex-bar-for-Mac
+brew tap kunzatt/codex-bar-for-mac https://github.com/kunzatt/codex-bar-for-Mac.git
+brew trust --cask kunzatt/codex-bar-for-mac/codexbar-for-mac
 brew install --cask codexbar-for-mac
 ```
+
+After that one-time setup, use only `brew install --cask codexbar-for-mac` and `brew upgrade --cask codexbar-for-mac`.
 
 After a new version has been published as a GitHub Release, update it remotely with:
 

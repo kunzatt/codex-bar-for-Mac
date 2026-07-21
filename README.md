@@ -13,9 +13,12 @@ Finder와 Desktop에는 파란 Codex 심볼 아래 굵은 `Codex Bar` 텍스트�
 Apple Silicon Mac에서는 Homebrew Cask로 설치할 수 있습니다. `codexbar`라는 이름은 이미 다른 앱이 사용 중이므로 이 앱의 Cask 이름은 `codexbar-for-mac`입니다.
 
 ```zsh
-brew tap kunzatt/codex-bar-for-Mac
+brew tap kunzatt/codex-bar-for-mac https://github.com/kunzatt/codex-bar-for-Mac.git
+brew trust --cask kunzatt/codex-bar-for-mac/codexbar-for-mac
 brew install --cask codexbar-for-mac
 ```
+
+첫 설정 뒤에는 `brew install --cask codexbar-for-mac`과 `brew upgrade --cask codexbar-for-mac`만 사용하면 됩니다.
 
 새 버전이 GitHub Release에 올라온 뒤 다음 명령으로 원격 업데이트합니다.
 

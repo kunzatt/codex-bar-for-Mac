@@ -1,7 +1,7 @@
 # CodexBar 아키텍처
 
 ```text
-NSStatusItem + hover/click popovers
+SwiftUI MenuBarExtra (.window)
                 │
                 ▼
       UsageStore (@MainActor)
@@ -21,7 +21,7 @@ AccountRepository   PollingCoordinator (30 s / 2 min)
 
 ## UI와 상태
 
-`StatusBarController`는 가변 너비 `NSStatusItem`을 만들고 `NSTrackingArea`로 hover를 감지합니다. 하나의 transient `NSPopover` 안에서 420ms hover 후 compact SwiftUI view를 보이고, 클릭하면 같은 창을 full view로 전환합니다. 하나의 창만 유지해 hover와 클릭 전환 중 보이지 않는 팝오버가 입력을 가로채지 않게 합니다.
+SwiftUI `MenuBarExtra`의 `.window` 스타일이 메뉴바 항목과 popover-like window를 소유합니다. macOS가 메뉴바 클릭, 바깥 클릭 닫힘, 앱 활성화, 창 수명을 직접 관리하며 hover는 SwiftUI `help` 툴팁만 사용합니다. window는 시스템 라이트·다크 모드를 따릅니다. 대표 계정의 잔여량과 초기화 시각을 먼저 보여주고 제한별 상세를 접을 수 있게 하며, 대표 계정 변경은 명시적인 별 버튼으로만 수행합니다. 설정은 SwiftUI `Settings` scene과 `SettingsLink`가 관리하는 별도 창으로 엽니다.
 
 `UsageStore`는 메인 액터에서 선호 설정과 계정 snapshot을 소유합니다. 한 계정의 실패는 그 계정 snapshot을 stale/auth-required로만 전환하므로 다른 계정의 갱신과 메뉴바는 계속 동작합니다.
 
@@ -37,7 +37,7 @@ AccountRepository   PollingCoordinator (30 s / 2 min)
 
 계정은 `CodexClientPool`의 UUID 키와 해당 계정 `CODEX_HOME`으로 분리됩니다. 앱 관리 프로필은 `cli_auth_credentials_store = "file"`을 갖고, `Process.environment["CODEX_HOME"]`이 항상 그 계정 경로를 가리킵니다. 앱은 인증 파일을 해석하지 않습니다.
 
-각 client는 한 지속 프로세스를 유지합니다. 종료 시 pending request/login continuation을 실패 처리하고, 이후 polling refresh가 프로세스를 다시 시작합니다. Polling은 30/60/120/300초 backoff에 작은 jitter를 더하고, 성공하면 기본 주기로 복귀합니다. 앱 종료 요청은 `terminateLater`로 잠시 보류한 뒤 모든 child process에 종료 신호를 보내고 짧은 grace period를 기다린 후 macOS 종료를 승인합니다. 팝오버 내부 입력과 같은 앱의 닫힘은 macOS transient 동작에 맡기고, 다른 앱이나 Desktop 클릭만 global mouse monitor가 보완합니다. 이 감시는 팝오버가 닫히면 즉시 제거하며, 클릭 시점의 좌표와 timestamp로 늦게 도착한 이벤트가 새 팝오버를 닫지 않게 합니다. hover 미리보기의 tracking area는 하나만 유지합니다.
+각 client는 한 지속 프로세스를 유지합니다. 종료 시 pending request/login continuation을 실패 처리하고, 이후 polling refresh가 프로세스를 다시 시작합니다. Polling은 30/60/120/300초 backoff에 작은 jitter를 더하고, 성공하면 기본 주기로 복귀합니다. 앱 종료 요청은 `terminateLater`로 잠시 보류한 뒤 모든 child process에 종료 신호를 보내고 짧은 grace period를 기다린 후 macOS 종료를 승인합니다. 메뉴바 window의 입력과 닫힘에는 별도 AppKit event monitor를 두지 않고 `MenuBarExtra`의 시스템 동작을 사용합니다.
 
 ## 저장 및 삭제 안전성
 
@@ -45,4 +45,4 @@ AccountRepository   PollingCoordinator (30 s / 2 min)
 
 ## 검증 경계
 
-`scripts/test.sh`는 UI·실제 자격 증명 없이 core Swift source를 컴파일한 뒤 독립 unit runner를 실행합니다. GUI hover, device-code 로그인, sleep/wake와 실제 child process 수명은 Xcode/로그인된 macOS GUI 환경에서 수행할 수동 통합 검증 항목입니다.
+`scripts/test.sh`는 UI·실제 자격 증명 없이 core Swift source를 컴파일한 뒤 독립 unit runner를 실행합니다. 메뉴바 window 상호작용, device-code 로그인, sleep/wake와 실제 child process 수명은 Xcode/로그인된 macOS GUI 환경에서 수행할 수동 통합 검증 항목입니다.

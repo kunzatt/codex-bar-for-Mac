@@ -2,7 +2,7 @@
 
 [한국어](README.md)
 
-CodexBar is a personal macOS menu-bar app for checking the remaining Codex quota across multiple ChatGPT accounts. It shows the primary account's remaining quota in the menu bar (for example, `C 41%`), offers a quick comparison on hover, and opens a full usage panel on click.
+CodexBar is a macOS menu-bar app for checking the remaining Codex quota across multiple ChatGPT accounts. It shows the primary account's remaining quota in the menu bar (for example, `41%`) and opens a usage panel focused on reset times and account health on click. Hovering shows a tooltip for the primary account. The app follows the system light or dark appearance.
 
 Finder and the Desktop use a dedicated app icon: a blue Codex symbol with bold `Codex Bar` text below it.
 
@@ -108,7 +108,7 @@ When an account requires a login, choose **Sign in again** from the usage popove
 
 ## Primary account and refreshes
 
-- Select an account row in the full panel, or use the star in Settings, to set the primary account.
+- Use the star next to an account in the full panel or Settings to set the primary account. Clicking the row itself never changes this preference.
 - The menu-bar item prefers the primary account's `codex` bucket. If unavailable, it uses the first available bucket.
 - Rate limits refresh every 30 seconds per account; token totals refresh every two minutes.
 - CodexBar requests an account-token refresh only when it starts a new local app-server process; ordinary polling does not force a new login or token rotation.
@@ -132,7 +132,7 @@ CodexBar never reads or parses the contents of `auth.json`. It does not store to
 
 - `codex app-server` is experimental in the Codex CLI. A CLI update may change response schemas, so raw JSON is isolated at the `ProtocolMapper` boundary.
 - Version 1 covers ChatGPT Codex usage only. API costs, other plan-specific optimisations, automatic account switching, and automatic reset-credit spending are out of scope.
-- Device-code login and menu-bar hover behavior need a GUI session and a signed-in account to test.
+- Device-code login and menu-bar interaction need a GUI session and a signed-in account to test.
 
 ## Troubleshooting
 

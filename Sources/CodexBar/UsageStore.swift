@@ -8,7 +8,6 @@ final class UsageStore: ObservableObject {
     @Published private(set) var snapshots: [UUID: AccountUsageSnapshot] = [:]
     @Published private(set) var isBootstrapped = false
     @Published var transientMessage: String?
-    @Published var showingSettings = false
     @Published var showingAddAccount = false
     @Published var reauthenticationProfile: AccountProfile?
 
@@ -166,10 +165,17 @@ final class UsageStore: ObservableObject {
             let login = try await clientPool.beginDeviceCodeLogin(profile: profile)
             return (profile, login)
         } catch {
-            updateSnapshot(profile.id) { snapshot in
-                snapshot.connectionState = .error
-                snapshot.lastError = friendly(error)
+            await clientPool.removeClient(for: profile.id)
+            if profile.isManagedByApp {
+                try? ProfileManager.removeManagedProfile(profile, repositoryRoot: root)
             }
+            preferences.profiles.removeAll { $0.id == profile.id }
+            snapshots[profile.id] = nil
+            if preferences.primaryAccountID == profile.id {
+                preferences.primaryAccountID = preferences.profiles.first(where: \.isEnabled)?.id ?? preferences.profiles.first?.id
+            }
+            persist()
+            restartPolling()
             throw error
         }
     }
@@ -196,20 +202,23 @@ final class UsageStore: ObservableObject {
         }
     }
 
-    func waitForDeviceLogin(profile: AccountProfile, loginID: String) async {
+    @discardableResult
+    func waitForDeviceLogin(profile: AccountProfile, loginID: String) async -> Bool {
         do {
             try await clientPool.waitForLogin(profile: profile, loginID: loginID)
             authenticatingAccountIDs.remove(profile.id)
             _ = await refresh(profileID: profile.id, includeUsage: true)
+            return true
         } catch is CancellationError {
             authenticatingAccountIDs.remove(profile.id)
-            return
+            return false
         } catch {
             authenticatingAccountIDs.remove(profile.id)
             updateSnapshot(profile.id) { snapshot in
                 snapshot.connectionState = isAuthenticationError(error) ? .authRequired : .error
                 snapshot.lastError = friendly(error)
             }
+            return false
         }
     }
 
@@ -246,6 +255,12 @@ final class UsageStore: ObservableObject {
         let cleanAlias = alias.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanAlias.isEmpty else { return }
         let profile = ProfileManager.defaultCodexProfile(alias: cleanAlias)
+        guard !preferences.profiles.contains(where: {
+            $0.codexHomePath.standardizedFileURL == profile.codexHomePath.standardizedFileURL
+        }) else {
+            transientMessage = "기본 ~/.codex 프로필이 이미 등록되어 있습니다."
+            return
+        }
         preferences.profiles.append(profile)
         if preferences.primaryAccountID == nil { preferences.primaryAccountID = profile.id }
         snapshots[profile.id] = AccountUsageSnapshot(accountID: profile.id)

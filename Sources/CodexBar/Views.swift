@@ -1059,7 +1059,7 @@ private struct SettingsSidebar: View {
 
             Spacer()
 
-            Text("CodexBar 0.1.0")
+            Text("CodexBar 0.1.1")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, 10)

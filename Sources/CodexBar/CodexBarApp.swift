@@ -56,22 +56,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 final class StatusBarController: NSObject {
     private let store: UsageStore
     private let statusItem: NSStatusItem
-    private let compactPopover = NSPopover()
-    private let fullPopover = NSPopover()
+    // A single popover owns both hover and click presentation. Keeping two AppKit popover
+    // windows alive at the same anchor can leave the compact window above the full view and
+    // swallow every click during a rapid hover-to-click transition.
+    private let usagePopover = NSPopover()
+    private let popoverPresentation = PopoverPresentation()
     private var subscriptions = Set<AnyCancellable>()
     private var hoverOpenTask: Task<Void, Never>?
     private var hoverCloseTask: Task<Void, Never>?
     private var pointerInButton = false
     private var pointerInCompactPopover = false
+    private var compactTrackingArea: NSTrackingArea?
     private var globalClickMonitor: Any?
+    private var popoverShownAt: TimeInterval = 0
 
     init(store: UsageStore) {
         self.store = store
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         configureButton()
-        configurePopovers()
-        configureOutsideClickDismissal()
+        configurePopover()
         observeStore()
         updateButton()
     }
@@ -93,13 +97,15 @@ final class StatusBarController: NSObject {
         button.addTrackingArea(tracking)
     }
 
-    private func configurePopovers() {
-        compactPopover.behavior = .transient
-        compactPopover.appearance = NSAppearance(named: .aqua)
-        compactPopover.contentViewController = lightHostingController(rootView: CompactHoverView(store: store))
-        fullPopover.behavior = .transient
-        fullPopover.appearance = NSAppearance(named: .aqua)
-        fullPopover.contentViewController = lightHostingController(rootView: UsagePopoverView(store: store))
+    private func configurePopover() {
+        // Native transient behavior owns all clicks inside this app's popover. A separate
+        // global monitor only supplements it for clicks delivered to other apps or the desktop.
+        usagePopover.behavior = .transient
+        usagePopover.appearance = NSAppearance(named: .aqua)
+        usagePopover.delegate = self
+        usagePopover.contentViewController = lightHostingController(
+            rootView: StatusPopoverContent(store: store, presentation: popoverPresentation)
+        )
     }
 
     private func lightHostingController<Content: View>(rootView: Content) -> NSHostingController<Content> {
@@ -108,27 +114,6 @@ final class StatusBarController: NSObject {
         controller.view.wantsLayer = true
         controller.view.layer?.backgroundColor = NSColor.clear.cgColor
         return controller
-    }
-
-    /// `NSPopover.transient` should close by itself, but status-item popovers do not always
-    /// receive an outside click when another app owns it. These monitors make that behavior explicit.
-    private func configureOutsideClickDismissal() {
-        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.dismissFullPopoverIfNeeded() }
-        }
-    }
-
-    private func dismissFullPopoverIfNeeded() {
-        guard fullPopover.isShown else { return }
-        let point = NSEvent.mouseLocation
-        if let popoverWindow = fullPopover.contentViewController?.view.window,
-           popoverWindow.frame.contains(point) { return }
-        if let button = statusItem.button,
-           let buttonWindow = button.window {
-            let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
-            if buttonRect.contains(point) { return }
-        }
-        fullPopover.performClose(nil)
     }
 
     private func observeStore() {
@@ -163,6 +148,9 @@ final class StatusBarController: NSObject {
     private func tooltip(for snapshot: AccountUsageSnapshot?) -> String {
         guard let profile = store.primaryProfile else { return "대표 계정을 추가하세요." }
         guard let snapshot else { return "\(profile.alias): 아직 사용량 정보가 없습니다." }
+        if snapshot.connectionState == .authRequired {
+            return "\(profile.alias): 로그인이 필요합니다. 팝오버에서 다시 로그인하세요."
+        }
         let usage = snapshot.remainingPercent.map { "잔여 \($0)%" } ?? "사용량 없음"
         let freshness = CodexBarFormatters.fetchedText(snapshot.fetchedAt)
         return "\(profile.alias): \(usage), \(freshness)"
@@ -171,11 +159,18 @@ final class StatusBarController: NSObject {
     @objc private func toggleFullPopover() {
         hoverOpenTask?.cancel()
         hoverCloseTask?.cancel()
-        if fullPopover.isShown {
-            fullPopover.performClose(nil)
+        if usagePopover.isShown {
+            if popoverPresentation.mode == .compact {
+                pointerInCompactPopover = false
+                popoverPresentation.mode = .full
+                activateUsagePopover()
+            } else {
+                closeUsagePopover()
+            }
         } else {
-            compactPopover.performClose(nil)
-            show(fullPopover)
+            pointerInCompactPopover = false
+            popoverPresentation.mode = .full
+            showUsagePopover(activating: true)
         }
     }
 
@@ -188,12 +183,13 @@ final class StatusBarController: NSObject {
         }
         pointerInButton = true
         hoverCloseTask?.cancel()
-        guard !fullPopover.isShown else { return }
+        guard !usagePopover.isShown else { return }
         hoverOpenTask?.cancel()
         hoverOpenTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(420))
-            guard let self, !Task.isCancelled, self.pointerInButton, !self.fullPopover.isShown else { return }
-            self.show(self.compactPopover)
+            guard let self, !Task.isCancelled, self.pointerInButton, !self.usagePopover.isShown else { return }
+            self.popoverPresentation.mode = .compact
+            self.showUsagePopover(activating: false)
             self.trackCompactPopover()
         }
     }
@@ -205,13 +201,74 @@ final class StatusBarController: NSObject {
         scheduleCompactClose()
     }
 
-    private func show(_ popover: NSPopover) {
+    private func showUsagePopover(activating: Bool) {
         guard let button = statusItem.button else { return }
-        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        if activating { NSApp.activate(ignoringOtherApps: true) }
+        usagePopover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popoverShownAt = ProcessInfo.processInfo.systemUptime
+        installOutsideClickMonitor()
+        if activating { activateUsagePopover() }
+    }
+
+    /// A status-item click does not always make an accessory app's popover key. Without this,
+    /// the first click inside the just-opened view can be consumed only to activate it.
+    private func activateUsagePopover() {
+        NSApp.activate(ignoringOtherApps: true)
+        usagePopover.contentViewController?.view.window?.makeKey()
+    }
+
+    private func closeUsagePopover() {
+        guard usagePopover.isShown else { return }
+        hoverOpenTask?.cancel()
+        hoverCloseTask?.cancel()
+        // `close()` cannot be vetoed by a nested presentation, so it never leaves an
+        // invisible popover window above the interactive SwiftUI content.
+        usagePopover.close()
+    }
+
+    private func installOutsideClickMonitor() {
+        guard globalClickMonitor == nil else { return }
+        let mouseEvents: NSEvent.EventTypeMask = [.leftMouseDown, .rightMouseDown]
+        globalClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: mouseEvents) { [weak self] event in
+            // Global events are asynchronous. Capture the point and timestamp at delivery so a
+            // click that happened before this popover was shown cannot close a later one.
+            let clickPoint = NSEvent.mouseLocation
+            let eventTimestamp = event.timestamp
+            MainActor.assumeIsolated {
+                self?.closeUsagePopoverIfClickedOutside(at: clickPoint, eventTimestamp: eventTimestamp)
+            }
+        }
+    }
+
+    private func removeOutsideClickMonitor() {
+        if let globalClickMonitor {
+            NSEvent.removeMonitor(globalClickMonitor)
+            self.globalClickMonitor = nil
+        }
+    }
+
+    private func closeUsagePopoverIfClickedOutside(at point: NSPoint, eventTimestamp: TimeInterval) {
+        guard usagePopover.isShown, eventTimestamp >= popoverShownAt, !popoverWindowContains(point) else { return }
+        if let button = statusItem.button, let buttonWindow = button.window {
+            let buttonFrame = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+            if buttonFrame.contains(point) { return }
+        }
+        closeUsagePopover()
+    }
+
+    private func popoverWindowContains(_ point: NSPoint) -> Bool {
+        guard let popoverWindow = usagePopover.contentViewController?.view.window else { return false }
+        return windowTree(popoverWindow, contains: point)
+    }
+
+    private func windowTree(_ window: NSWindow, contains point: NSPoint) -> Bool {
+        if window.frame.contains(point) { return true }
+        return window.childWindows?.contains { windowTree($0, contains: point) } ?? false
     }
 
     private func trackCompactPopover() {
-        guard let view = compactPopover.contentViewController?.view else { return }
+        guard let view = usagePopover.contentViewController?.view else { return }
+        if let compactTrackingArea { view.removeTrackingArea(compactTrackingArea) }
         let tracking = NSTrackingArea(
             rect: .zero,
             options: [.activeAlways, .mouseEnteredAndExited, .inVisibleRect],
@@ -219,16 +276,50 @@ final class StatusBarController: NSObject {
             userInfo: ["area": "compact"]
         )
         view.addTrackingArea(tracking)
+        compactTrackingArea = tracking
     }
 
     private func scheduleCompactClose() {
-        guard !fullPopover.isShown else { return }
+        guard popoverPresentation.mode == .compact else { return }
         hoverOpenTask?.cancel()
         hoverCloseTask?.cancel()
         hoverCloseTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
             guard let self, !Task.isCancelled, !self.pointerInButton, !self.pointerInCompactPopover else { return }
-            self.compactPopover.performClose(nil)
+            self.closeUsagePopover()
+            self.pointerInCompactPopover = false
+        }
+    }
+}
+
+extension StatusBarController: NSPopoverDelegate {
+    func popoverDidClose(_ notification: Notification) {
+        removeOutsideClickMonitor()
+        popoverShownAt = 0
+        pointerInCompactPopover = false
+    }
+}
+
+@MainActor
+private final class PopoverPresentation: ObservableObject {
+    enum Mode {
+        case compact
+        case full
+    }
+
+    @Published var mode: Mode = .compact
+}
+
+private struct StatusPopoverContent: View {
+    @ObservedObject var store: UsageStore
+    @ObservedObject var presentation: PopoverPresentation
+
+    var body: some View {
+        switch presentation.mode {
+        case .compact:
+            CompactHoverView(store: store)
+        case .full:
+            UsagePopoverView(store: store)
         }
     }
 }

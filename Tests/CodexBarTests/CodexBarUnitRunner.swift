@@ -11,6 +11,7 @@ struct CodexBarUnitRunner {
             ("null-heavy payload", testNullPayload),
             ("Int64 token usage", testTokenUsage),
             ("malformed JSONL recovery", testMalformedJSONL),
+            ("authentication error classification", testAuthenticationErrorClassification),
             ("duration and clamp", testDurationAndClamp),
             ("Pro-family plan recognition", testProFamilyPlanRecognition),
             ("polling backoff", testPollingBackoff),
@@ -78,6 +79,25 @@ struct CodexBarUnitRunner {
         let messages = buffer.append(Data("{bad json}\n{\"id\":2,\"result\":{}}\n".utf8))
         try expect(messages.count == 1, "must skip one malformed line")
         try expect(messages.first?.id?.integerValue == 2, "valid later response survives")
+    }
+
+    private static func testAuthenticationErrorClassification() throws {
+        try expect(
+            CodexAppServerClient.isExplicitAuthenticationFailure(ServerErrorPayload(code: 401, message: nil)),
+            "HTTP unauthorized is authentication required"
+        )
+        try expect(
+            CodexAppServerClient.isExplicitAuthenticationFailure(ServerErrorPayload(code: nil, message: "Authentication required")),
+            "explicit authentication message is authentication required"
+        )
+        try expect(
+            !CodexAppServerClient.isExplicitAuthenticationFailure(ServerErrorPayload(code: nil, message: "Unable to refresh auth metadata")),
+            "generic auth wording must remain a retryable error"
+        )
+        try expect(
+            !CodexAppServerClient.isExplicitAuthenticationFailure(ServerErrorPayload(code: nil, message: "Login request timed out")),
+            "generic login wording must remain a retryable error"
+        )
     }
 
     private static func testDurationAndClamp() throws {

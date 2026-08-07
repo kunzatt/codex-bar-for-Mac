@@ -104,11 +104,14 @@ Repeat this process for each additional account. Each account has a separate `CO
 
 To use the default Codex login in `~/.codex`, choose **Register default ~/.codex** in Settings. That profile is marked as external; CodexBar does not delete that directory or its authentication files.
 
+When an account requires a login, choose **Sign in again** from the usage popover or Settings to start Device Code Login. The existing profile and quota history stay in place; only the credentials for the account completed in the browser are refreshed.
+
 ## Primary account and refreshes
 
 - Select an account row in the full panel, or use the star in Settings, to set the primary account.
 - The menu-bar item prefers the primary account's `codex` bucket. If unavailable, it uses the first available bucket.
 - Rate limits refresh every 30 seconds per account; token totals refresh every two minutes.
+- CodexBar requests an account-token refresh only when it starts a new local app-server process; ordinary polling does not force a new login or token rotation.
 - When a request fails, the latest valid value remains visible and retries back off from 30 to 60, 120, and 300 seconds. All accounts refresh immediately after the Mac wakes from sleep.
 
 ## Data and security
@@ -137,9 +140,9 @@ CodexBar never reads or parses the contents of `auth.json`. It does not store to
 
 Select the `codex` executable in Settings. The ChatGPT app usually bundles it at `/Applications/ChatGPT.app/Contents/Resources/codex`.
 
-**Login has expired**
+**Login is required**
 
-Add the account again from the popover. For an external `~/.codex` profile, complete your normal Codex CLI login first, then refresh CodexBar.
+CodexBar shows this only for an explicit authentication failure. A temporary refresh or server failure remains retryable and is retried automatically. If the state persists, add the account again from the popover. For an external `~/.codex` profile, complete your normal Codex CLI login first, then refresh CodexBar.
 
 **No usage is displayed**
 

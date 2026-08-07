@@ -84,6 +84,7 @@ enum ProfileManager {
         }
         try FileManager.default.removeItem(at: expected)
     }
+
 }
 
 struct CodexExecutableLocator: Sendable {

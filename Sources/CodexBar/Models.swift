@@ -193,7 +193,7 @@ enum CodexBarError: LocalizedError, Sendable, Equatable {
         case .processExited: "Codex app-server가 예기치 않게 종료되었습니다."
         case .malformedResponse: "Codex에서 해석할 수 없는 응답을 받았습니다."
         case .authenticationRequired: "이 계정은 다시 로그인해야 합니다."
-        case .server: "Codex 요청을 완료하지 못했습니다."
+        case .server: "Codex 정보를 갱신하지 못했습니다. 잠시 후 자동으로 다시 시도합니다."
         case .invalidLoginResponse: "Codex 로그인 응답이 예상과 다릅니다."
         case .invalidProfilePath: "보안을 위해 이 프로필 경로는 삭제할 수 없습니다."
         }

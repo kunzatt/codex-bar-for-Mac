@@ -23,6 +23,9 @@ actor CodexAppServerClient: CodexUsageProvider {
     private var completedLogins: [String: Result<Void, Error>] = [:]
     private var isInitialized = false
     private var initializationTask: Task<Void, Error>?
+    /// A new app-server process needs one account-token refresh before its first read.
+    /// Later reads still need the `refreshToken` field, but set to false so they do not rotate it.
+    private var shouldRefreshAccountToken = true
 
     init(
         profile: AccountProfile,
@@ -35,26 +38,33 @@ actor CodexAppServerClient: CodexUsageProvider {
     }
 
     func refresh(includeUsage: Bool) async throws -> ProviderRefreshResult {
-        async let accountResult = request(
+        let accountParameters: JSONValue = .object([
+            "refreshToken": .bool(shouldRefreshAccountToken)
+        ])
+        // The current app-server requires the refreshToken field for every account/read.
+        // Complete the one-time token refresh before quota requests; routine reads explicitly
+        // pass false so they keep the valid session without rotating it again.
+        let account = try await request(
             method: "account/read",
-            params: .object(["refreshToken": .bool(true)]),
+            params: accountParameters,
             timeout: .seconds(20)
         )
-        async let limitsResult = request(method: "account/rateLimits/read", timeout: .seconds(20))
-
-        let account = try await accountResult
         guard !(account["requiresOpenaiAuth"]?.bool == true && account["account"]?.object == nil) else {
             throw CodexBarError.authenticationRequired
         }
-        let limits = try await limitsResult
+        shouldRefreshAccountToken = false
+
+        async let limitsResult = request(method: "account/rateLimits/read", timeout: .seconds(20))
         if includeUsage {
-            let usage = try await request(method: "account/usage/read", timeout: .seconds(20))
+            async let usageResult = request(method: "account/usage/read", timeout: .seconds(20))
+            let (limits, usage) = try await (limitsResult, usageResult)
             return ProviderRefreshResult(
                 identity: ProtocolMapper.accountIdentity(from: account),
                 buckets: ProtocolMapper.rateLimitBuckets(from: limits),
                 tokenSummary: ProtocolMapper.tokenSummary(from: usage)
             )
         }
+        let limits = try await limitsResult
         return ProviderRefreshResult(
             identity: ProtocolMapper.accountIdentity(from: account),
             buckets: ProtocolMapper.rateLimitBuckets(from: limits),
@@ -191,6 +201,7 @@ actor CodexAppServerClient: CodexUsageProvider {
         errorPipe = errors
         stdoutLineBuffer = JSONLLineBuffer()
         isInitialized = false
+        shouldRefreshAccountToken = true
     }
 
     private func request(method: String, params: JSONValue? = nil, timeout: Duration) async throws -> JSONValue {
@@ -241,8 +252,7 @@ actor CodexAppServerClient: CodexUsageProvider {
     private func handle(_ message: JSONLMessage) {
         if let requestID = message.id?.integerValue, let pendingRequest = pending.removeValue(forKey: requestID) {
             if let error = message.error {
-                let lowercased = (error.message ?? "").lowercased()
-                let mapped: Error = lowercased.contains("auth") || lowercased.contains("login")
+                let mapped: Error = Self.isExplicitAuthenticationFailure(error)
                     ? CodexBarError.authenticationRequired
                     : CodexBarError.server("server request failed")
                 pendingRequest.continuation.resume(throwing: mapped)
@@ -294,11 +304,30 @@ actor CodexAppServerClient: CodexUsageProvider {
         outputPipe = nil
         errorPipe = nil
         isInitialized = false
+        shouldRefreshAccountToken = true
         let outstanding = pending
         pending.removeAll()
         for item in outstanding.values { item.continuation.resume(throwing: error) }
         let waiters = loginWaiters
         loginWaiters.removeAll()
         for item in waiters.values { item.resume(throwing: error) }
+    }
+
+    /// Keep the re-login UI for unambiguous authentication failures only. Generic app-server
+    /// errors sometimes contain words such as "auth" while a token refresh is in progress.
+    nonisolated static func isExplicitAuthenticationFailure(_ error: ServerErrorPayload) -> Bool {
+        if error.code == 401 { return true }
+        let message = (error.message ?? "").lowercased()
+        let explicitPhrases = [
+            "authentication required",
+            "login required",
+            "not authenticated",
+            "unauthorized",
+            "invalid token",
+            "token expired",
+            "expired token",
+            "session expired"
+        ]
+        return explicitPhrases.contains { message.contains($0) }
     }
 }

@@ -10,12 +10,14 @@ final class UsageStore: ObservableObject {
     @Published var transientMessage: String?
     @Published var showingSettings = false
     @Published var showingAddAccount = false
+    @Published var reauthenticationProfile: AccountProfile?
 
     private let repository: AccountRepository
     private let clientPool: CodexClientPool
     private let polling: PollingCoordinator
     private var refreshingAccountIDs = Set<UUID>()
     private var queuedAccountUpdateIDs = Set<UUID>()
+    private var authenticatingAccountIDs = Set<UUID>()
 
     init(
         repository: AccountRepository = AccountRepository(),
@@ -81,6 +83,9 @@ final class UsageStore: ObservableObject {
     @discardableResult
     func refresh(profileID: UUID, includeUsage: Bool) async -> Bool {
         guard let profile = profiles.first(where: { $0.id == profileID }), profile.isEnabled else { return false }
+        // A device-code login owns this profile until it completes or is cancelled. Polling
+        // during that period could otherwise overwrite “로그인 중” with an old auth error.
+        guard !authenticatingAccountIDs.contains(profileID) else { return true }
         guard !refreshingAccountIDs.contains(profileID) else { return true }
         refreshingAccountIDs.insert(profileID)
         defer {
@@ -169,13 +174,38 @@ final class UsageStore: ObservableObject {
         }
     }
 
+    /// Starts a device-code login for an existing profile without removing its quota history
+    /// or replacing the profile. This also works for an external ~/.codex profile, but changes
+    /// only happen after the user completes the device-code flow in their browser.
+    func beginReauthentication(profile: AccountProfile) async throws -> DeviceCodeLogin {
+        guard profiles.contains(where: { $0.id == profile.id }) else { throw CodexBarError.invalidLoginResponse }
+        authenticatingAccountIDs.insert(profile.id)
+        updateSnapshot(profile.id) { snapshot in
+            snapshot.connectionState = .authenticating
+            snapshot.lastError = nil
+        }
+        do {
+            return try await clientPool.beginDeviceCodeLogin(profile: profile)
+        } catch {
+            authenticatingAccountIDs.remove(profile.id)
+            updateSnapshot(profile.id) { snapshot in
+                snapshot.connectionState = isAuthenticationError(error) ? .authRequired : .error
+                snapshot.lastError = friendly(error)
+            }
+            throw error
+        }
+    }
+
     func waitForDeviceLogin(profile: AccountProfile, loginID: String) async {
         do {
             try await clientPool.waitForLogin(profile: profile, loginID: loginID)
+            authenticatingAccountIDs.remove(profile.id)
             _ = await refresh(profileID: profile.id, includeUsage: true)
         } catch is CancellationError {
+            authenticatingAccountIDs.remove(profile.id)
             return
         } catch {
+            authenticatingAccountIDs.remove(profile.id)
             updateSnapshot(profile.id) { snapshot in
                 snapshot.connectionState = isAuthenticationError(error) ? .authRequired : .error
                 snapshot.lastError = friendly(error)
@@ -185,6 +215,15 @@ final class UsageStore: ObservableObject {
 
     func cancelDeviceLogin(profile: AccountProfile, loginID: String) {
         Task { await clientPool.cancelLogin(profile: profile, loginID: loginID) }
+    }
+
+    func cancelReauthentication(profile: AccountProfile, loginID: String) async {
+        await clientPool.cancelLogin(profile: profile, loginID: loginID)
+        authenticatingAccountIDs.remove(profile.id)
+        updateSnapshot(profile.id) { snapshot in
+            snapshot.connectionState = .authRequired
+            snapshot.lastError = "로그인이 취소되었습니다. 다시 로그인하면 사용량 갱신이 재개됩니다."
+        }
     }
 
     func cancelAndDiscardDeviceLogin(profile: AccountProfile, loginID: String) async {

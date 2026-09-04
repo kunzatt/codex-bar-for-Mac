@@ -3,6 +3,8 @@ import SwiftUI
 
 struct UsagePopoverView: View {
     @ObservedObject var store: UsageStore
+    let addAccount: () -> Void
+    let reauthenticate: (AccountProfile) -> Void
     @State private var showsDetails = false
 
     var body: some View {
@@ -16,7 +18,7 @@ struct UsagePopoverView: View {
                         PrimaryQuotaCard(
                             profile: primary,
                             snapshot: store.primarySnapshot,
-                            reauthenticate: { store.reauthenticationProfile = primary }
+                            reauthenticate: { reauthenticate(primary) }
                         )
 
                         if let snapshot = store.primarySnapshot,
@@ -34,7 +36,7 @@ struct UsagePopoverView: View {
                                             profile: profile,
                                             snapshot: store.snapshots[profile.id],
                                             makePrimary: { store.makePrimary(profile.id) },
-                                            reauthenticate: { store.reauthenticationProfile = profile }
+                                            reauthenticate: { reauthenticate(profile) }
                                         )
                                         if index < otherProfiles.count - 1 {
                                             Divider().padding(.leading, 45)
@@ -45,23 +47,17 @@ struct UsagePopoverView: View {
                             }
                         }
                     } else {
-                        EmptyDashboard(addAccount: { store.showingAddAccount = true })
+                        EmptyDashboard(addAccount: addAccount)
                     }
                 }
                 .padding(16)
             }
 
             Divider()
-            PopoverFooter(store: store)
+            PopoverFooter(addAccount: addAccount)
         }
         .frame(width: 420, height: 590)
         .background(Color(nsColor: .windowBackgroundColor))
-        .sheet(isPresented: $store.showingAddAccount) {
-            AddAccountView(store: store)
-        }
-        .sheet(item: $store.reauthenticationProfile) { profile in
-            ReauthenticateAccountView(store: store, profile: profile)
-        }
         .alert("CodexBar", isPresented: Binding(
             get: { store.transientMessage != nil },
             set: { if !$0 { store.transientMessage = nil } }
@@ -104,7 +100,7 @@ private struct PopoverHeader: View {
 }
 
 private struct PopoverFooter: View {
-    @ObservedObject var store: UsageStore
+    let addAccount: () -> Void
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
@@ -133,7 +129,7 @@ private struct PopoverFooter: View {
             Spacer()
 
             Button {
-                store.showingAddAccount = true
+                addAccount()
             } label: {
                 Label("계정 추가", systemImage: "plus")
             }
@@ -596,7 +592,7 @@ private struct InlineNotice: View {
 
 struct AddAccountView: View {
     @ObservedObject var store: UsageStore
-    @Environment(\.dismiss) private var dismiss
+    let onClose: () -> Void
     @State private var alias = ""
     @State private var activeProfile: AccountProfile?
     @State private var login: DeviceCodeLogin?
@@ -610,7 +606,7 @@ struct AddAccountView: View {
                 title: "계정 연결",
                 subtitle: login == nil ? "ChatGPT Pro 계정을 CodexBar에 추가합니다" : "브라우저에서 로그인을 완료하세요",
                 symbol: "person.badge.plus",
-                dismiss: login == nil ? { dismiss() } : nil
+                dismiss: login == nil ? onClose : nil
             )
             Divider()
 
@@ -667,7 +663,7 @@ struct AddAccountView: View {
             }
 
             HStack {
-                Button("취소", role: .cancel) { dismiss() }
+                Button("취소", role: .cancel, action: onClose)
                 Spacer()
                 Button {
                     beginLogin()
@@ -699,8 +695,7 @@ struct AddAccountView: View {
                 NSWorkspace.shared.open(result.1.verificationURL)
                 let completed = await store.waitForDeviceLogin(profile: result.0, loginID: result.1.loginID)
                 if completed {
-                    store.transientMessage = "\(result.0.alias) 계정이 연결되었습니다."
-                    dismiss()
+                    onClose()
                 } else {
                     login = nil
                     errorText = store.snapshots[result.0.id]?.lastError ?? "로그인을 완료하지 못했습니다."
@@ -715,15 +710,15 @@ struct AddAccountView: View {
     private func cancelLogin(profile: AccountProfile, login: DeviceCodeLogin) {
         Task {
             await store.cancelAndDiscardDeviceLogin(profile: profile, loginID: login.loginID)
-            dismiss()
+            onClose()
         }
     }
 }
 
-private struct ReauthenticateAccountView: View {
+struct ReauthenticateAccountView: View {
     @ObservedObject var store: UsageStore
     let profile: AccountProfile
-    @Environment(\.dismiss) private var dismiss
+    let onClose: () -> Void
     @State private var login: DeviceCodeLogin?
     @State private var errorText: String?
     @State private var isStarting = false
@@ -735,7 +730,7 @@ private struct ReauthenticateAccountView: View {
                 title: "다시 로그인",
                 subtitle: profile.alias,
                 symbol: "person.badge.key",
-                dismiss: login == nil ? { dismiss() } : nil
+                dismiss: login == nil ? onClose : nil
             )
             Divider()
 
@@ -764,7 +759,7 @@ private struct ReauthenticateAccountView: View {
                             .foregroundStyle(.red)
                             .fixedSize(horizontal: false, vertical: true)
                         HStack {
-                            Button("닫기", role: .cancel) { dismiss() }
+                            Button("닫기", role: .cancel, action: onClose)
                             Spacer()
                             Button("다시 시도") { startLogin() }
                                 .buttonStyle(.borderedProminent)
@@ -791,8 +786,7 @@ private struct ReauthenticateAccountView: View {
                 NSWorkspace.shared.open(nextLogin.verificationURL)
                 let completed = await store.waitForDeviceLogin(profile: profile, loginID: nextLogin.loginID)
                 if completed {
-                    store.transientMessage = "\(profile.alias) 로그인이 완료되었습니다."
-                    dismiss()
+                    onClose()
                 } else {
                     login = nil
                     errorText = store.snapshots[profile.id]?.lastError ?? "로그인을 완료하지 못했습니다."
@@ -807,7 +801,7 @@ private struct ReauthenticateAccountView: View {
     private func cancelLogin(_ login: DeviceCodeLogin) {
         Task {
             await store.cancelReauthentication(profile: profile, loginID: login.loginID)
-            dismiss()
+            onClose()
         }
     }
 }
@@ -967,10 +961,14 @@ struct SettingsView: View {
         }
         .frame(width: 720, height: 570)
         .sheet(isPresented: $presentsAddAccount) {
-            AddAccountView(store: store)
+            AddAccountView(store: store, onClose: { presentsAddAccount = false })
         }
         .sheet(item: $reauthenticationProfile) { profile in
-            ReauthenticateAccountView(store: store, profile: profile)
+            ReauthenticateAccountView(
+                store: store,
+                profile: profile,
+                onClose: { reauthenticationProfile = nil }
+            )
         }
         .confirmationDialog("계정을 제거할까요?", isPresented: Binding(
             get: { deletionCandidate != nil },
@@ -1059,7 +1057,7 @@ private struct SettingsSidebar: View {
 
             Spacer()
 
-            Text("CodexBar 0.1.2")
+            Text("CodexBar 0.1.3")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, 10)

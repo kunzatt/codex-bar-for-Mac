@@ -8,7 +8,11 @@ struct CodexBarApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            UsagePopoverView(store: appDelegate.store)
+            UsagePopoverView(
+                store: appDelegate.store,
+                addAccount: { appDelegate.showAddAccount() },
+                reauthenticate: { appDelegate.showReauthentication(for: $0) }
+            )
         } label: {
             CodexBarMenuLabel(store: appDelegate.store)
         }
@@ -23,6 +27,7 @@ struct CodexBarApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let store = UsageStore()
+    private lazy var accountFlowWindow = AccountFlowWindowController(store: store)
     private var wakeObserver: NSObjectProtocol?
     private var terminationInProgress = false
 
@@ -56,6 +61,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if let wakeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver)
         }
+    }
+
+    func showAddAccount() {
+        accountFlowWindow.showAddAccount()
+    }
+
+    func showReauthentication(for profile: AccountProfile) {
+        accountFlowWindow.showReauthentication(for: profile)
     }
 }
 

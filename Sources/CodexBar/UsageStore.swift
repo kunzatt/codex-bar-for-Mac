@@ -8,8 +8,6 @@ final class UsageStore: ObservableObject {
     @Published private(set) var snapshots: [UUID: AccountUsageSnapshot] = [:]
     @Published private(set) var isBootstrapped = false
     @Published var transientMessage: String?
-    @Published var showingAddAccount = false
-    @Published var reauthenticationProfile: AccountProfile?
 
     private let repository: AccountRepository
     private let clientPool: CodexClientPool

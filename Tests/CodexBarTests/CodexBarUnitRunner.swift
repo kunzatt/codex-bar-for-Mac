@@ -14,7 +14,7 @@ struct CodexBarUnitRunner {
             ("malformed JSONL recovery", testMalformedJSONL),
             ("authentication error classification", testAuthenticationErrorClassification),
             ("duration and clamp", testDurationAndClamp),
-            ("Pro-family plan recognition", testProFamilyPlanRecognition),
+            ("Codex plan recognition", testCodexPlanRecognition),
             ("polling backoff", testPollingBackoff),
             ("repository persistence", testRepositoryPersistence),
             ("log redaction", testRedaction)
@@ -127,10 +127,12 @@ struct CodexBarUnitRunner {
         try expect(CodexBarFormatters.windowText(73) == "73분", "arbitrary duration")
     }
 
-    private static func testProFamilyPlanRecognition() throws {
-        try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "pro").isPro, "pro")
-        try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "prolite").isPro, "prolite")
-        try expect(!AccountIdentity(loginType: "chatgpt", email: nil, planType: "unknown").isPro, "unknown")
+    private static func testCodexPlanRecognition() throws {
+        let plus = ProtocolMapper.accountIdentity(from: try decode(#"{"account":{"planType":"plus"}}"#))
+        try expect(plus.codexPlanName == "Plus", "plus from app-server")
+        try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "pro").codexPlanName == "Pro", "pro")
+        try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "prolite").codexPlanName == "Pro Lite", "prolite")
+        try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "future-plan").codexPlanName == "future-plan", "unknown plan remains visible")
     }
 
     private static func testPollingBackoff() throws {

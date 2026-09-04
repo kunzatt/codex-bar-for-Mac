@@ -218,8 +218,8 @@ private struct PrimaryQuotaCard: View {
                         Text(profile.alias)
                             .font(.headline)
                             .lineLimit(1)
-                        if snapshot?.identity.isPro == true {
-                            PlanBadge(text: "Pro")
+                        if let planName = snapshot?.identity.codexPlanName {
+                            PlanBadge(text: planName)
                         }
                     }
 
@@ -257,13 +257,6 @@ private struct PrimaryQuotaCard: View {
                 )
             } else if let error = snapshot?.lastError {
                 InlineNotice(text: error, symbol: "exclamationmark.triangle", tint: .orange)
-            } else if let plan = snapshot?.identity.planType,
-                      snapshot?.identity.isPro != true {
-                InlineNotice(
-                    text: "현재 플랜: \(plan). Pro 사용량이 표시되지 않을 수 있습니다.",
-                    symbol: "exclamationmark.triangle",
-                    tint: .orange
-                )
             }
         }
         .padding(16)
@@ -604,7 +597,7 @@ struct AddAccountView: View {
         VStack(spacing: 0) {
             SheetHeader(
                 title: "계정 연결",
-                subtitle: login == nil ? "ChatGPT Pro 계정을 CodexBar에 추가합니다" : "브라우저에서 로그인을 완료하세요",
+                subtitle: login == nil ? "ChatGPT Codex 계정을 CodexBar에 추가합니다" : "브라우저에서 로그인을 완료하세요",
                 symbol: "person.badge.plus",
                 dismiss: login == nil ? onClose : nil
             )
@@ -635,7 +628,7 @@ struct AddAccountView: View {
             VStack(alignment: .leading, spacing: 7) {
                 Text("계정 이름")
                     .font(.subheadline.weight(.semibold))
-                TextField("예: 개인 Pro", text: $alias)
+                TextField("예: 개인 Plus", text: $alias)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { beginLogin() }
                 Text("메뉴바와 계정 목록에만 표시되는 이름입니다.")
@@ -1057,7 +1050,7 @@ private struct SettingsSidebar: View {
 
             Spacer()
 
-            Text("CodexBar 0.1.3")
+            Text("CodexBar 0.1.4")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, 10)

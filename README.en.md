@@ -46,7 +46,7 @@ Put the generated checksum in `Casks/codexbar-for-mac.rb`, then upload the ZIP t
 - Release ZIP/Homebrew Cask: Apple Silicon Mac running macOS Sonoma (14) or later
 - Building from source: Apple Silicon or Intel Mac running macOS Sonoma (14) or later, with full Xcode (recommended) or Swift 6 command-line tools
 - The ChatGPT app or Codex CLI. The default discovery path is `/Applications/ChatGPT.app/Contents/Resources/codex`.
-- A Codex account on a ChatGPT Pro or Pro Lite plan
+- A Codex account on a ChatGPT Plus, Pro, or Pro Lite plan
 
 CodexBar does not use OpenAI Platform API keys, web scraping, or unofficial REST endpoints. It only calls local `codex app-server --stdio` processes.
 
@@ -97,7 +97,7 @@ The tests cover JSONL response and notification decoding, multiple quota buckets
 
 1. Click `C --` in the menu bar and choose **Add account**.
 2. Choose an alias and select **Start Device Code Login**.
-3. In the browser, sign in to the desired ChatGPT Pro or Pro Lite account and enter the displayed device code.
+3. In the browser, sign in to the desired ChatGPT Plus, Pro, or Pro Lite account and enter the displayed device code.
 4. When the login-complete notification appears, CodexBar reloads the account, plan, and quota data.
 
 Repeat this process for each additional account. Each account has a separate `CODEX_HOME` and `codex app-server` process, so authentication never mixes between profiles.

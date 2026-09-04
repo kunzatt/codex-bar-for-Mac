@@ -32,10 +32,21 @@ struct AccountIdentity: Codable, Hashable, Sendable {
 
     static let unknown = AccountIdentity(loginType: "unknown", email: nil, planType: nil)
 
-    /// Codex currently reports both `pro` and `prolite` as paid Pro-family plans.
-    var isPro: Bool {
-        guard let planType = planType?.lowercased() else { return false }
-        return ["pro", "prolite"].contains(planType)
+    /// The app-server reports the account's ChatGPT plan. Keep the original value for
+    /// future plans while normalizing the names currently shown by Codex.
+    var codexPlanName: String? {
+        guard let rawPlanType = planType?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawPlanType.isEmpty else {
+            return nil
+        }
+        switch rawPlanType.lowercased() {
+        case "plus": return "Plus"
+        case "pro": return "Pro"
+        case "prolite", "pro-lite", "pro_lite": return "Pro Lite"
+        case "go": return "Go"
+        case "free": return "Free"
+        default: return rawPlanType
+        }
     }
 }
 
@@ -172,7 +183,7 @@ struct AccountUsageSnapshot: Codable, Identifiable, Hashable, Sendable {
     }
 
     /// The shortest active Codex quota is the one most likely to block the next
-    /// request, such as the shared five-hour window for ChatGPT Pro.
+    /// request, such as a short rolling Codex quota window.
     var activeCodexWindow: RateLimitWindow? { primaryCodexBucket?.shortestWindow }
 
     var remainingPercent: Int? { activeCodexWindow?.remainingPercent }

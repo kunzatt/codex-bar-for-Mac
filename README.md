@@ -2,7 +2,7 @@
 
 [English](README.en.md)
 
-CodexBar는 여러 ChatGPT Pro Codex 계정의 남은 쿼터를 macOS 메뉴바에서 확인하는 앱입니다. 대표 계정의 `41%` 같은 잔여량을 메뉴바에 표시하고, 클릭하면 초기화 시각과 계정 상태를 우선한 사용량 패널을 엽니다. 포인터를 올리면 대표 계정 요약을 툴팁으로 보여주며 시스템 라이트·다크 모드를 자동으로 따릅니다.
+CodexBar는 여러 ChatGPT Plus, Pro, Pro Lite Codex 계정의 남은 쿼터를 macOS 메뉴바에서 확인하는 앱입니다. 대표 계정의 `41%` 같은 잔여량을 메뉴바에 표시하고, 클릭하면 초기화 시각과 계정 상태를 우선한 사용량 패널을 엽니다. 포인터를 올리면 대표 계정 요약을 툴팁으로 보여주며 시스템 라이트·다크 모드를 자동으로 따릅니다.
 
 Finder와 Desktop에는 파란 Codex 심볼 아래 굵은 `Codex Bar` 텍스트가 있는 전용 앱 아이콘을 사용합니다.
 
@@ -44,7 +44,7 @@ brew uninstall --zap --cask codexbar-for-mac
 - 배포 ZIP/Homebrew Cask: macOS 14 Sonoma 이상 Apple Silicon Mac
 - 소스 빌드: macOS 14 Sonoma 이상 Apple Silicon 또는 Intel Mac, 전체 Xcode(권장) 또는 Swift 6 명령행 도구
 - ChatGPT 앱 또는 Codex CLI. 기본 탐색 경로는 `/Applications/ChatGPT.app/Contents/Resources/codex`입니다.
-- ChatGPT Pro 또는 Pro Lite로 로그인할 수 있는 Codex 계정
+- ChatGPT Plus, Pro 또는 Pro Lite로 로그인할 수 있는 Codex 계정
 
 CodexBar는 OpenAI Platform API 키, 웹 스크래핑, 비공식 REST 엔드포인트를 사용하지 않습니다. 로컬 `codex app-server --stdio`만 호출합니다.
 
@@ -95,10 +95,10 @@ cd CodexBar
 
 1. 메뉴바의 `C --`를 클릭하고 **계정 추가**를 선택합니다.
 2. 별칭을 정하고 **Device Code 로그인 시작**을 누릅니다.
-3. 브라우저가 열리면 원하는 ChatGPT Pro 또는 Pro Lite 계정으로 로그인하고 화면에 표시된 코드를 입력합니다.
+3. 브라우저가 열리면 원하는 ChatGPT Plus, Pro 또는 Pro Lite 계정으로 로그인하고 화면에 표시된 코드를 입력합니다.
 4. 로그인 완료 알림을 받으면 CodexBar가 계정/플랜/쿼터를 다시 읽습니다.
 
-추가 Pro 계정도 같은 순서를 반복합니다. 계정마다 독립된 `CODEX_HOME`과 `codex app-server` 프로세스를 사용하므로 인증이 섞이지 않습니다.
+추가 계정도 같은 순서를 반복합니다. 계정마다 독립된 `CODEX_HOME`과 `codex app-server` 프로세스를 사용하므로 인증이 섞이지 않습니다.
 
 기존 기본 Codex 로그인(`~/.codex`)을 쓰려면 설정의 **기본 ~/.codex 등록**을 선택할 수 있습니다. 이 프로필은 외부 프로필로 표시되며, CodexBar가 디렉터리나 인증 파일을 삭제하지 않습니다.
 
@@ -128,7 +128,7 @@ CodexBar는 `auth.json`의 내용을 직접 읽거나 파싱하지 않습니다.
 ## 알려진 제한
 
 - `codex app-server`는 Codex CLI의 experimental 기능입니다. Codex 업데이트로 응답 스키마가 바뀔 수 있으므로 원시 JSON은 `ProtocolMapper` 경계에서만 처리합니다.
-- v1은 ChatGPT Pro Codex 사용량만 다룹니다. API 비용, 다른 플랜용 최적화, 자동 계정 전환, reset credit 자동 소비는 지원하지 않습니다.
+- v1은 ChatGPT Plus, Pro, Pro Lite Codex 사용량을 다룹니다. API 비용, 자동 계정 전환, reset credit 자동 소비는 지원하지 않습니다.
 - 실제 device-code 로그인과 메뉴바 상호작용 검증은 GUI와 로그인된 계정이 필요합니다.
 
 ## 문제 해결

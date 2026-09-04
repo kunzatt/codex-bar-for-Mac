@@ -150,7 +150,7 @@ actor CodexAppServerClient: CodexUsageProvider {
             _ = try await issueRequest(
                 method: "initialize",
                 params: .object([
-                    "clientInfo": .object(["name": .string("codexbar"), "version": .string("0.1.1")]),
+                    "clientInfo": .object(["name": .string("codexbar"), "version": .string("0.1.2")]),
                     "capabilities": .object(["experimentalApi": .bool(false)])
                 ]),
                 timeout: .seconds(10)

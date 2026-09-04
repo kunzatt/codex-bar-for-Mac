@@ -8,6 +8,7 @@ struct CodexBarUnitRunner {
             ("initialize response decoding", testInitializeResponse),
             ("notification between responses", testNotification),
             ("rate limit mapping", testRateLimitMapping),
+            ("shortest quota window selection", testShortestQuotaWindowSelection),
             ("null-heavy payload", testNullPayload),
             ("Int64 token usage", testTokenUsage),
             ("malformed JSONL recovery", testMalformedJSONL),
@@ -65,6 +66,24 @@ struct CodexBarUnitRunner {
         try expect(buckets.count == 1, "fallback bucket")
         try expect(buckets[0].limitId == "codex", "safe fallback id")
         try expect(buckets[0].primary == nil, "null window")
+    }
+
+    private static func testShortestQuotaWindowSelection() throws {
+        let bucket = RateLimitBucket(
+            limitId: "codex",
+            displayName: "Codex",
+            primary: RateLimitWindow(usedPercent: 59, windowDurationMinutes: 10_080),
+            secondary: RateLimitWindow(usedPercent: 15, windowDurationMinutes: 300),
+            hasCredits: nil,
+            unlimitedCredits: nil,
+            creditBalance: nil,
+            spendControlReached: nil,
+            planType: nil,
+            rateLimitReachedType: nil
+        )
+        let snapshot = AccountUsageSnapshot(accountID: UUID(), rateLimitBuckets: [bucket])
+        try expect(snapshot.activeCodexWindow?.windowDurationMinutes == 300, "five-hour window wins")
+        try expect(snapshot.remainingPercent == 85, "status uses five-hour remaining")
     }
 
     private static func testTokenUsage() throws {

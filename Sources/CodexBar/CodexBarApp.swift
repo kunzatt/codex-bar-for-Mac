@@ -92,9 +92,15 @@ private struct CodexBarMenuLabel: View {
         if snapshot.connectionState == .authRequired {
             return "\(profile.alias): 로그인이 필요합니다."
         }
-        let usage = snapshot.remainingPercent.map { "잔여 \($0)%" } ?? "사용량 없음"
+        let usage = snapshot.primaryCodexBucket?.windows
+            .sorted { lhs, rhs in
+                (lhs.windowDurationMinutes ?? .max) < (rhs.windowDurationMinutes ?? .max)
+            }
+            .map { "\(CodexBarFormatters.windowText($0.windowDurationMinutes)) \($0.remainingPercent)% 남음" }
+            .joined(separator: " · ") ?? "사용량 없음"
         return "\(profile.alias): \(usage), \(CodexBarFormatters.fetchedText(snapshot.fetchedAt))"
     }
+
 }
 
 /// The OpenAI Blossom rendered from vector data as a monochrome menu-bar template.

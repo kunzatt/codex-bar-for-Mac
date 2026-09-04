@@ -65,6 +65,27 @@ struct RateLimitBucket: Codable, Identifiable, Hashable, Sendable {
     var spendControlReached: Bool?
     var planType: String?
     var rateLimitReachedType: String?
+
+    /// The app-server currently reports the weekly and five-hour Codex limits as
+    /// primary/secondary windows. Their order is not a user-facing contract, so
+    /// use the shortest known window for the status UI.
+    var windows: [RateLimitWindow] {
+        [primary, secondary].compactMap { $0 }
+    }
+
+    var shortestWindow: RateLimitWindow? {
+        windows.min { lhs, rhs in
+            let lhsDuration = lhs.windowDurationMinutes ?? .max
+            let rhsDuration = rhs.windowDurationMinutes ?? .max
+            if lhsDuration != rhsDuration { return lhsDuration < rhsDuration }
+
+            switch (lhs.resetsAt, rhs.resetsAt) {
+            case let (lhsReset?, rhsReset?): return lhsReset < rhsReset
+            case (.some, .none): return true
+            default: return false
+            }
+        }
+    }
 }
 
 struct DailyTokenUsage: Codable, Identifiable, Hashable, Sendable {
@@ -150,7 +171,11 @@ struct AccountUsageSnapshot: Codable, Identifiable, Hashable, Sendable {
         rateLimitBuckets.first(where: { $0.limitId.lowercased() == "codex" }) ?? rateLimitBuckets.first
     }
 
-    var remainingPercent: Int? { primaryCodexBucket?.primary?.remainingPercent }
+    /// The shortest active Codex quota is the one most likely to block the next
+    /// request, such as the shared five-hour window for ChatGPT Pro.
+    var activeCodexWindow: RateLimitWindow? { primaryCodexBucket?.shortestWindow }
+
+    var remainingPercent: Int? { activeCodexWindow?.remainingPercent }
 }
 
 struct CodexBarPreferences: Codable, Sendable {

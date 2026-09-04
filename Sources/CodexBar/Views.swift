@@ -215,7 +215,7 @@ private struct PrimaryQuotaCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 16) {
-                RemainingRing(snapshot: snapshot, size: 90, lineWidth: 9, font: .title3.weight(.bold))
+                RemainingRing(window: snapshot?.activeCodexWindow, size: 90, lineWidth: 9, font: .title3.weight(.bold))
 
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 7) {
@@ -234,7 +234,7 @@ private struct PrimaryQuotaCard: View {
                             .lineLimit(1)
                     }
 
-                    Text(primaryResetSummary(snapshot))
+                    Text(activeResetSummary(snapshot))
                         .font(.subheadline.weight(.medium))
                         .lineLimit(2)
 
@@ -287,7 +287,7 @@ private struct PrimaryQuotaCard: View {
 }
 
 private struct RemainingRing: View {
-    let snapshot: AccountUsageSnapshot?
+    let window: RateLimitWindow?
     let size: CGFloat
     let lineWidth: CGFloat
     let font: Font
@@ -299,16 +299,16 @@ private struct RemainingRing: View {
             Circle()
                 .trim(from: 0, to: progress)
                 .stroke(
-                    usageColor(snapshot?.remainingPercent),
+                    usageColor(window?.remainingPercent),
                     style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 0) {
-                Text(snapshot?.remainingPercent.map { "\($0)%" } ?? "—")
+                Text(window.map { "\($0.remainingPercent)%" } ?? "—")
                     .font(font)
                     .monospacedDigit()
                 if size > 70 {
-                    Text("남음")
+                    Text(quotaWindowTitle(window))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -316,11 +316,11 @@ private struct RemainingRing: View {
         }
         .frame(width: size, height: size)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(remainingAccessibilityText(snapshot?.remainingPercent))
+        .accessibilityLabel(remainingAccessibilityText(window?.remainingPercent, window: window))
     }
 
     private var progress: CGFloat {
-        guard let remaining = snapshot?.remainingPercent else { return 0 }
+        guard let remaining = window?.remainingPercent else { return 0 }
         return CGFloat(remaining) / 100
     }
 }
@@ -437,11 +437,11 @@ private struct QuotaBucketCard: View {
                 }
             }
             if let primary = bucket.primary {
-                QuotaWindowRow(title: "기본", window: primary)
+                QuotaWindowRow(title: quotaWindowTitle(primary), window: primary)
             }
             if let secondary = bucket.secondary {
                 Divider()
-                QuotaWindowRow(title: "보조", window: secondary)
+                QuotaWindowRow(title: quotaWindowTitle(secondary), window: secondary)
             }
         }
         .padding(12)
@@ -1059,7 +1059,7 @@ private struct SettingsSidebar: View {
 
             Spacer()
 
-            Text("CodexBar 0.1.1")
+            Text("CodexBar 0.1.2")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, 10)
@@ -1437,11 +1437,11 @@ private struct SettingsPill: View {
     }
 }
 
-private func primaryResetSummary(_ snapshot: AccountUsageSnapshot?) -> String {
-    guard let window = snapshot?.primaryCodexBucket?.primary else {
+private func activeResetSummary(_ snapshot: AccountUsageSnapshot?) -> String {
+    guard let window = snapshot?.activeCodexWindow else {
         return snapshot?.connectionState.displayName ?? "사용량을 불러오는 중"
     }
-    return "초기화 \(CodexBarFormatters.resetText(window.resetsAt))"
+    return "\(quotaWindowTitle(window)) · 초기화 \(CodexBarFormatters.resetText(window.resetsAt))"
 }
 
 private func shortResetText(_ date: Date?) -> String {
@@ -1455,15 +1455,20 @@ private func accountSecondaryText(profile: AccountProfile, snapshot: AccountUsag
     guard profile.isEnabled else { return "갱신 중지됨" }
     if snapshot?.connectionState == .authRequired { return "로그인 필요" }
     if snapshot?.connectionState == .stale { return "오래된 정보" }
-    if let reset = snapshot?.primaryCodexBucket?.primary?.resetsAt {
+    if let reset = snapshot?.activeCodexWindow?.resetsAt {
         return "초기화 \(shortResetText(reset))"
     }
     return snapshot?.connectionState.displayName ?? "사용량 없음"
 }
 
-private func remainingAccessibilityText(_ remaining: Int?) -> String {
-    if let remaining { return "잔여 Codex 쿼터 \(remaining)퍼센트" }
+private func remainingAccessibilityText(_ remaining: Int?, window: RateLimitWindow?) -> String {
+    if let remaining { return "\(quotaWindowTitle(window)) 잔여 \(remaining)퍼센트" }
     return "Codex 쿼터 정보 없음"
+}
+
+private func quotaWindowTitle(_ window: RateLimitWindow?) -> String {
+    guard let minutes = window?.windowDurationMinutes, minutes > 0 else { return "사용량 한도" }
+    return "\(CodexBarFormatters.windowText(minutes)) 한도"
 }
 
 private func usageColor(_ remaining: Int?) -> Color {

@@ -15,6 +15,8 @@ struct CodexBarUnitRunner {
             ("authentication error classification", testAuthenticationErrorClassification),
             ("duration and clamp", testDurationAndClamp),
             ("Codex plan recognition", testCodexPlanRecognition),
+            ("Plus five-hour window availability", testPlusFiveHourWindowAvailability),
+            ("latest daily token bucket", testLatestDailyTokenBucket),
             ("polling backoff", testPollingBackoff),
             ("repository persistence", testRepositoryPersistence),
             ("log redaction", testRedaction)
@@ -130,9 +132,94 @@ struct CodexBarUnitRunner {
     private static func testCodexPlanRecognition() throws {
         let plus = ProtocolMapper.accountIdentity(from: try decode(#"{"account":{"planType":"plus"}}"#))
         try expect(plus.codexPlanName == "Plus", "plus from app-server")
+        try expect(plus.isPlus, "plus flag")
         try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "pro").codexPlanName == "Pro", "pro")
         try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "prolite").codexPlanName == "Pro Lite", "prolite")
         try expect(AccountIdentity(loginType: "chatgpt", email: nil, planType: "future-plan").codexPlanName == "future-plan", "unknown plan remains visible")
+    }
+
+    private static func testPlusFiveHourWindowAvailability() throws {
+        let plus = AccountIdentity(loginType: "chatgpt", email: nil, planType: " Plus ")
+        let weeklyOnly = RateLimitBucket(
+            limitId: "codex",
+            displayName: "Codex",
+            primary: RateLimitWindow(usedPercent: 31, windowDurationMinutes: 10_080),
+            secondary: nil,
+            hasCredits: nil,
+            unlimitedCredits: nil,
+            creditBalance: nil,
+            spendControlReached: nil,
+            planType: "plus",
+            rateLimitReachedType: nil
+        )
+        let weeklyAndFiveHour = RateLimitBucket(
+            limitId: "codex",
+            displayName: "Codex",
+            primary: weeklyOnly.primary,
+            secondary: RateLimitWindow(usedPercent: 12, windowDurationMinutes: 300),
+            hasCredits: nil,
+            unlimitedCredits: nil,
+            creditBalance: nil,
+            spendControlReached: nil,
+            planType: "plus",
+            rateLimitReachedType: nil
+        )
+
+        let missing = AccountUsageSnapshot(accountID: UUID(), identity: plus, rateLimitBuckets: [weeklyOnly])
+        try expect(missing.isPlusFiveHourWindowMissing, "plus weekly-only response is explicit")
+
+        let present = AccountUsageSnapshot(accountID: UUID(), identity: plus, rateLimitBuckets: [weeklyAndFiveHour])
+        try expect(!present.isPlusFiveHourWindowMissing, "five-hour response is not flagged")
+
+        let pro = AccountUsageSnapshot(
+            accountID: UUID(),
+            identity: AccountIdentity(loginType: "chatgpt", email: nil, planType: "pro"),
+            rateLimitBuckets: [weeklyOnly]
+        )
+        try expect(!pro.isPlusFiveHourWindowMissing, "non-Plus response is not flagged")
+
+        let unrelatedBucket = RateLimitBucket(
+            limitId: "codex_bengalfox",
+            displayName: "Spark",
+            primary: weeklyOnly.primary,
+            secondary: nil,
+            hasCredits: nil,
+            unlimitedCredits: nil,
+            creditBalance: nil,
+            spendControlReached: nil,
+            planType: "plus",
+            rateLimitReachedType: nil
+        )
+        let unrelated = AccountUsageSnapshot(accountID: UUID(), identity: plus, rateLimitBuckets: [unrelatedBucket])
+        try expect(!unrelated.isPlusFiveHourWindowMissing, "unrelated bucket is not flagged")
+    }
+
+    private static func testLatestDailyTokenBucket() throws {
+        let summary = TokenUsageSummary(
+            lifetimeTokens: nil,
+            peakDailyTokens: nil,
+            longestRunningTurnSeconds: nil,
+            currentStreakDays: nil,
+            longestStreakDays: nil,
+            dailyBuckets: [
+                DailyTokenUsage(startDate: "2026-09-08", tokens: 200),
+                DailyTokenUsage(startDate: "2026-09-09", tokens: 138),
+                DailyTokenUsage(startDate: "2026-09-07", tokens: 300)
+            ]
+        )
+        try expect(summary.latestDailyBucket?.startDate == "2026-09-09", "latest bucket is date-based")
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 9, day: 9))!
+        try expect(
+            CodexBarFormatters.dailyUsageLabel(for: "2026-09-09", now: now, calendar: calendar) == "오늘",
+            "today label"
+        )
+        try expect(
+            CodexBarFormatters.dailyUsageLabel(for: "2026-09-08", now: now, calendar: calendar) == "최근 일 · 2026-09-08",
+            "historical bucket label"
+        )
     }
 
     private static func testPollingBackoff() throws {

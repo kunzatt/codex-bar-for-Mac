@@ -48,6 +48,10 @@ struct AccountIdentity: Codable, Hashable, Sendable {
         default: return rawPlanType
         }
     }
+
+    var isPlus: Bool {
+        planType?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "plus"
+    }
 }
 
 struct RateLimitWindow: Codable, Hashable, Sendable {
@@ -97,6 +101,10 @@ struct RateLimitBucket: Codable, Identifiable, Hashable, Sendable {
             }
         }
     }
+
+    var hasFiveHourWindow: Bool {
+        windows.contains { $0.windowDurationMinutes == 5 * 60 }
+    }
 }
 
 struct DailyTokenUsage: Codable, Identifiable, Hashable, Sendable {
@@ -121,6 +129,15 @@ struct TokenUsageSummary: Codable, Hashable, Sendable {
         longestStreakDays: nil,
         dailyBuckets: []
     )
+
+    /// The server does not promise an ordering for daily buckets. Never treat the
+    /// last array element as today's usage.
+    var latestDailyBucket: DailyTokenUsage? {
+        dailyBuckets.max { lhs, rhs in
+            if lhs.startDate != rhs.startDate { return lhs.startDate < rhs.startDate }
+            return lhs.tokens < rhs.tokens
+        }
+    }
 }
 
 enum ConnectionState: String, Codable, Hashable, Sendable {
@@ -187,6 +204,17 @@ struct AccountUsageSnapshot: Codable, Identifiable, Hashable, Sendable {
     var activeCodexWindow: RateLimitWindow? { primaryCodexBucket?.shortestWindow }
 
     var remainingPercent: Int? { activeCodexWindow?.remainingPercent }
+
+    /// ChatGPT Plus currently may return only the weekly bucket even when a
+    /// five-hour limit applies. Keep that distinction explicit instead of inventing
+    /// a percentage for a window the app-server did not return.
+    var isPlusFiveHourWindowMissing: Bool {
+        guard identity.isPlus,
+              let bucket = primaryCodexBucket,
+              bucket.limitId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "codex",
+              !bucket.windows.isEmpty else { return false }
+        return !bucket.hasFiveHourWindow
+    }
 }
 
 struct CodexBarPreferences: Codable, Sendable {

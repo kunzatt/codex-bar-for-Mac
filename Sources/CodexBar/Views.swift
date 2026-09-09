@@ -257,6 +257,12 @@ private struct PrimaryQuotaCard: View {
                 )
             } else if let error = snapshot?.lastError {
                 InlineNotice(text: error, symbol: "exclamationmark.triangle", tint: .orange)
+            } else if snapshot?.isPlusFiveHourWindowMissing == true {
+                InlineNotice(
+                    text: "Plus 5시간 한도 정보가 Codex 응답에 없어 주간 한도만 표시합니다.",
+                    symbol: "info.circle",
+                    tint: .orange
+                )
             }
         }
         .padding(16)
@@ -389,7 +395,7 @@ private struct QuotaDetailsSection: View {
                     QuotaBucketCard(bucket: bucket)
                 }
                 if snapshot.tokenSummary.lifetimeTokens != nil ||
-                    snapshot.tokenSummary.dailyBuckets.last?.tokens != nil ||
+                    snapshot.tokenSummary.latestDailyBucket?.tokens != nil ||
                     snapshot.tokenSummary.peakDailyTokens != nil {
                     TokenSummaryCard(summary: snapshot.tokenSummary)
                 }
@@ -480,7 +486,10 @@ private struct TokenSummaryCard: View {
             Text("토큰 사용")
                 .font(.subheadline.weight(.semibold))
             HStack(spacing: 0) {
-                TokenMetric(label: "오늘", value: summary.dailyBuckets.last?.tokens)
+                TokenMetric(
+                    label: CodexBarFormatters.dailyUsageLabel(for: summary.latestDailyBucket?.startDate),
+                    value: summary.latestDailyBucket?.tokens
+                )
                 Divider().frame(height: 30)
                 TokenMetric(label: "누적", value: summary.lifetimeTokens)
                 Divider().frame(height: 30)

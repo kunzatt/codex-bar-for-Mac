@@ -131,6 +131,7 @@ CodexBar never reads or parses the contents of `auth.json`. It does not store to
 ## Known limitations
 
 - `codex app-server` is experimental in the Codex CLI. A CLI update may change response schemas, so raw JSON is isolated at the `ProtocolMapper` boundary.
+- The Plus five-hour limit is shown when the Codex response includes a 300-minute bucket. If the server returns only the weekly bucket, CodexBar does not estimate the missing value and shows the weekly limit with an explanation.
 - Version 1 covers ChatGPT Codex usage only. API costs, other plan-specific optimisations, automatic account switching, and automatic reset-credit spending are out of scope.
 - Device-code login and menu-bar interaction need a GUI session and a signed-in account to test.
 

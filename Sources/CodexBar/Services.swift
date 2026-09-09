@@ -267,6 +267,29 @@ enum CodexBarFormatters {
         return NumberFormatter.localizedString(from: NSNumber(value: tokens), number: .decimal)
     }
 
+    static func dailyUsageLabel(
+        for startDate: String?,
+        now: Date = .now,
+        calendar: Calendar = .current
+    ) -> String {
+        guard let startDate = startDate?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !startDate.isEmpty else {
+            return "최근 일"
+        }
+
+        // The app-server currently sends an ISO date (and may add a time later).
+        // Compare its date portion with the user's local calendar day. If it is
+        // not today's bucket, show the actual date instead of claiming it is today.
+        let bucketDate = String(startDate.prefix(10))
+        guard bucketDate.count == 10 else { return "최근 일 · \(startDate)" }
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return bucketDate == formatter.string(from: now) ? "오늘" : "최근 일 · \(bucketDate)"
+    }
+
     static func windowText(_ minutes: Int?) -> String {
         guard let minutes, minutes > 0 else { return "기간 미상" }
         if minutes % (60 * 24 * 7) == 0 { return "\(minutes / (60 * 24 * 7))주" }

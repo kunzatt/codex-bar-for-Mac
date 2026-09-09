@@ -128,6 +128,7 @@ CodexBar는 `auth.json`의 내용을 직접 읽거나 파싱하지 않습니다.
 ## 알려진 제한
 
 - `codex app-server`는 Codex CLI의 experimental 기능입니다. Codex 업데이트로 응답 스키마가 바뀔 수 있으므로 원시 JSON은 `ProtocolMapper` 경계에서만 처리합니다.
+- Plus의 5시간 한도는 Codex 서버 응답에 300분 버킷이 있을 때 표시합니다. 서버가 주간 버킷만 보내면 앱은 값을 추정하지 않고 주간 한도만 표시합니다.
 - v1은 ChatGPT Plus, Pro, Pro Lite Codex 사용량을 다룹니다. API 비용, 자동 계정 전환, reset credit 자동 소비는 지원하지 않습니다.
 - 실제 device-code 로그인과 메뉴바 상호작용 검증은 GUI와 로그인된 계정이 필요합니다.
 
